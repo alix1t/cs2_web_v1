@@ -145,7 +145,7 @@ int main() {
     std::mt19937 gen(rd());
     std::uniform_real_distribution<float> scan_interval_dis(0.12f, 0.24f);
     std::uniform_int_distribution<int> pause_duration_dis(1, 2);
-    std::uniform_int_distribution<int> total_scan_time_dis(100, 120);
+    std::uniform_int_distribution<int> total_scan_time_dis(60, 80);
 
     int total_scan_time = total_scan_time_dis(gen);
     auto start_time = std::chrono::steady_clock::now();
