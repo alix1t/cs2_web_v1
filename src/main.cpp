@@ -18,7 +18,7 @@ public:
     bool verify(const std::string& license_key) {
         CURL* curl = curl_easy_init();
         if (!curl) {
-            std::cerr << "³õÊ¼»¯Ê§°Ü" << std::endl;
+            std::cerr << "åˆå§‹åŒ–å¤±è´¥" << std::endl;
             return false;
         }
 
@@ -36,7 +36,7 @@ public:
             return false;
         }
 
-        std::cout << "ÑéÖ¤½á¹û: " << response_buffer << std::endl;
+        std::cout << "éªŒè¯ç»“æžœ: " << response_buffer << std::endl;
         return parseResponse(response_buffer);
     }
 
@@ -45,14 +45,14 @@ private:
 
     bool parseResponse(const std::string& response) {
         if (response.find("\"success\":true") != std::string::npos) {
-            std::cout << "¿¨ÃÜÑéÖ¤³É¹¦£¡" << std::endl;
+            std::cout << "å¡å¯†éªŒè¯æˆåŠŸï¼" << std::endl;
             return true;
         }
-        if (response.find("ÎÞÐ§µÄ¿¨ÃÜ") != std::string::npos) {
-            std::cout << "¿¨ÃÜÑéÖ¤Ê§°Ü£¡" << std::endl;
+        if (response.find("æ— æ•ˆçš„å¡å¯†") != std::string::npos) {
+            std::cout << "å¡å¯†éªŒè¯å¤±è´¥ï¼" << std::endl;
             return false;
         }
-        std::cerr << "Î´ÖªÏìÓ¦£¡" << std::endl;
+        std::cerr << "æœªçŸ¥å“åº”ï¼" << std::endl;
         return false;
     }
 };
@@ -126,40 +126,47 @@ bool initializeSystem() {
 
 int main() {
     std::string license_key;
-    std::cout << "ÇëÊäÈë¿¨ÃÜ: ";
+    std::cout << "è¯·è¾“å…¥å¡å¯†: ";
     std::cin >> license_key;
 
     LicenseVerifier verifier("http://km.jujue.fun/verify_card_key.php");
 
     if (!verifier.verify(license_key)) {
-        std::cerr << "¿¨ÃÜÑéÖ¤Ê§°Ü" << std::endl;
+        std::cerr << "å¡å¯†éªŒè¯å¤±è´¥" << std::endl;
         return 0;
     }
 
     if (!initializeSystem()) {
-        std::cerr << "³õÊ¼»¯Ê§°Ü¡£" << std::endl;
+        std::cerr << "åˆå§‹åŒ–å¤±è´¥ã€‚" << std::endl;
         return 0;
     }
 
     std::random_device rd;
     std::mt19937 gen(rd());
-    std::uniform_real_distribution<float> dis(0.12f, 0.24f);
+    std::uniform_real_distribution<float> scan_interval_dis(0.12f, 0.24f);
+    std::uniform_int_distribution<int> pause_duration_dis(1, 2);
+    std::uniform_int_distribution<int> total_scan_time_dis(100, 120);
 
-    int scan_count = 0;
+    int total_scan_time = total_scan_time_dis(gen);
+    auto start_time = std::chrono::steady_clock::now();
 
-    for (;;) {
+    while (true) {
         sdk::update();
         f::run();
         web_socket->send(f::m_data.dump());
 
-        std::this_thread::sleep_for(std::chrono::duration<float>(dis(gen)));
+        std::this_thread::sleep_for(std::chrono::duration<float>(scan_interval_dis(gen)));
 
-        scan_count++;
+        auto elapsed_time = std::chrono::duration_cast<std::chrono::seconds>(
+            std::chrono::steady_clock::now() - start_time).count();
 
-        if (scan_count >= 50) {
-            LOG_INFO("pause 4");
-            std::this_thread::sleep_for(std::chrono::seconds(4));
-            scan_count = 0;
+        if (elapsed_time >= total_scan_time) {
+            int pause_duration = pause_duration_dis(gen);
+            LOG_INFO("pause", pause_duration);
+            std::this_thread::sleep_for(std::chrono::seconds(pause_duration));
+
+            total_scan_time = total_scan_time_dis(gen);
+            start_time = std::chrono::steady_clock::now();
         }
 
         web_socket->poll();
